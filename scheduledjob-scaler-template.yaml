@@ -1,0 +1,57 @@
+apiVersion: v1
+kind: Template
+labels:
+  template: scheduledjob-scaler-template
+metadata:
+  annotations:
+    description: scheduler scale application.
+    tags: other
+  creationTimestamp: null
+  name: scheduledjob-scaler-template
+objects:
+- apiVersion: batch/v2alpha1
+  kind: ScheduledJob
+  metadata:
+    creationTimestamp: null
+    name: ${ScheduledJob_Name}
+  spec:
+    concurrencyPolicy: Allow
+    jobTemplate:
+      metadata:
+        creationTimestamp: null
+      spec:
+        template:
+          metadata:
+            creationTimestamp: null
+          spec:
+            containers:
+            - env:
+              - name: DEPLOY_INFO_MAPPING
+                value: ${DEPLOY_INFO_MAPPING}
+              args:
+              - /bin/sh
+              - -c
+              - /opt/scheduledjob.sh
+              image: registry.cloud.com:5000/openshift3/rhel7-scheduledjob:1.0
+              imagePullPolicy: Always
+              name: scaler
+              resources: {}
+              terminationMessagePath: /dev/termination-log
+            dnsPolicy: ClusterFirst
+            restartPolicy: OnFailure
+            securityContext: {}
+            terminationGracePeriodSeconds: 60
+    schedule: ${Schedule_Policy}
+    suspend: false
+parameters:
+- description: "The name for the ScheduledJob."
+  name: ScheduledJob_Name
+  required: true
+  value: scalerjob
+- description: "format Namespaces/DC_name:Desired_num, more than one can separated by ','.eg: test/apache:3,demo/nginx:5"
+  name: DEPLOY_INFO_MAPPING
+  required: true
+- description: "Schedule for the job,specified in cron format.default: '*/5 * * * *'"
+  name: Schedule_Policy
+  required: true
+  value: "*/5 * * * *"
